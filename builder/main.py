@@ -18,23 +18,40 @@
 
 from SCons.Script import AlwaysBuild, Default, DefaultEnvironment
 
+from platformio.util import get_systype
 env = DefaultEnvironment()
 
+env.Replace(
+    _BINPREFIX="",
+    AR="${_BINPREFIX}ar",
+    AS="${_BINPREFIX}as",
+    CC="${_BINPREFIX}gcc",
+    CXX="${_BINPREFIX}g++",
+    GDB="${_BINPREFIX}gdb",
+    OBJCOPY="${_BINPREFIX}objcopy",
+    RANLIB="${_BINPREFIX}ranlib",
+    SIZETOOL="${_BINPREFIX}size",
 # Remove generic C/C++ tools
-for k in ("CC", "CXX"):
-    if k in env:
-        del env[k]
+    SIZEPRINTCMD='$SIZETOOL $SOURCES',
+    PROGSUFFIX=".exe"
+)
 
+env.Append(
+    LINKFLAGS=[
+        "-static",
+        "-static-libgcc",
+        "-static-libstdc++"
+    ]
+)
 # Preserve C and C++ build flags
-backup_cflags = env.get("CFLAGS", [])
-backup_cxxflags = env.get("CXXFLAGS", [])
-
-# Scan for GCC compiler
-env.Tool("gcc")
-env.Tool("g++")
-
-# Restore C/C++ build flags as they were overridden by env.Tool
-env.Append(CFLAGS=backup_cflags, CXXFLAGS=backup_cxxflags)
+if get_systype() == "darwin_x86_64":
+    env.Replace(
+        _BINPREFIX="i586-mingw32-"
+    )
+elif get_systype() in ("linux_x86_64", "linux_i686"):
+    env.Replace(
+        _BINPREFIX="i686-w64-mingw32-"
+    )
 
 #
 # Target: Build executable program
